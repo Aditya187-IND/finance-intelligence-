@@ -39,7 +39,7 @@ if "chat_session" not in st.session_state and api_key:
     """
     
     st.session_state.chat_session = st.session_state.ai_client.chats.create(
-        model="gemini-2.5-flash",
+        model="gemini-1.5-flash",
         config=types.GenerateContentConfig(
             system_instruction=system_prompt
         )
