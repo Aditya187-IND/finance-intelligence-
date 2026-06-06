@@ -4,67 +4,73 @@ from google.genai import types
 import os
 from dotenv import load_dotenv
 
-# 1. Try to load the secret API key from the hidden file first
+# 1. Load the secret API key
 load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
 
 # 2. Setup the Web Page UI
 st.set_page_config(page_title="AI Finance Intelligence", page_icon="💰")
-st.title("💰 Personal Finance Intelligence System")
-st.write("Paste your raw bank statement or expense list below to get instant AI analysis.")
+st.title("💰 AI Personal Finance Assistant")
+st.write("I remember our conversation! Paste your expenses, tell me your salary, or ask follow-up questions.")
 
-# 3. BULLETPROOF FALLBACK: If the .env file failed, create a sidebar input box
+# 3. BULLETPROOF FALLBACK
 if not api_key:
     st.sidebar.header("🔑 API Setup Required")
-    st.sidebar.warning("Your .env file wasn't detected by Windows.")
     api_key = st.sidebar.text_input("Paste your Gemini API Key here:", type="password")
-    st.sidebar.info("Get a free key from: https://aistudio.google.com/")
 
-# 4. Create a text box for the user to type/paste expenses
-expenses_text = st.text_area(
-    "Your Expenses:", 
-    height=200, 
-    placeholder="Example:\nUber $45\nWhole Foods $120\nStarbucks $6"
-)
+# 4. MEMORY BANK: Initialize the Chat Session and History
+# This creates a notebook in the app's brain to remember the conversation
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-# 5. Create the Submit Button and define what happens when it is clicked
-if st.button("Analyze Spending"):
+# This creates the actual Gemini AI brain with our upgraded prompt
+if "chat_session" not in st.session_state and api_key:
+    client = genai.Client(api_key=api_key)
     
-    # Check if we have an API key from either the file OR the sidebar box
+    # THE UPGRADED PROMPT: We removed the "3 tips" limit and told it to be detailed
+    system_prompt = """
+    You are an expert Personal Finance Intelligence AI. 
+    You will receive a user's raw expenses, salary information, or general finance questions.
+    Your goals:
+    1. Provide highly detailed, comprehensive financial breakdowns.
+    2. If given expenses, analyze where their money went and identify high budget areas.
+    3. Provide specific, advanced saving, budgeting, and investing strategies. Do not limit your tips; give as much detail as necessary.
+    Format your response in clean Markdown. Be conversational, professional, and act like a dedicated financial advisor.
+    """
+    
+    # We use client.chats.create() instead of generate_content() to enable memory!
+    st.session_state.chat_session = client.chats.create(
+        model="gemini-2.5-flash",
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt
+        )
+    )
+
+# 5. DRAW THE CHAT HISTORY: Show all past messages on the screen
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+
+# 6. THE NEW INPUT BOX: A modern chat bar at the bottom of the screen
+if prompt := st.chat_input("Enter your expenses, salary, or ask a question..."):
+    
     if not api_key:
         st.error("Please enter a valid Gemini API Key in the sidebar to proceed.")
-    elif not expenses_text.strip():
-        st.warning("Please enter some expenses to analyze.")
     else:
+        # Show the user's message on the screen and save it to memory
+        st.chat_message("user").markdown(prompt)
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        
         # Show a loading spinner while the AI thinks
-        with st.spinner("Analyzing your spending..."):
-            try:
-                # Configure the modern Gemini AI Client with the active key
-                client = genai.Client(api_key=api_key)
-                
-                # The core intelligence instructions
-                system_prompt = """
-                You are an expert Personal Finance Intelligence AI. 
-                You will receive raw, unformatted text containing a user's recent expenses. 
-                Analyze the data and provide:
-                1. A brief summary of where their money went.
-                2. An alert identifying where their budget seems unusually high.
-                3. Exactly three distinct, actionable tips on where they can save money based ONLY on the data provided.
-                Format your response in clean Markdown with clear headings. Keep it concise.
-                """
-                
-                # Send it to Gemini
-                response = client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=f"User Expense Data:\n{expenses_text}",
-                    config=types.GenerateContentConfig(
-                        system_instruction=system_prompt
-                    )
-                )
-                
-                # Print the AI's response to the screen
-                st.subheader("AI Financial Insights")
-                st.markdown(response.text)
-                
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                try:
+                    # Send the message to the AI (it automatically remembers past context!)
+                    response = st.session_state.chat_session.send_message(prompt)
+                    
+                    # Print the response and save it to memory
+                    st.markdown(response.text)
+                    st.session_state.messages.append({"role": "assistant", "content": response.text})
+                    
+                except Exception as e:
+                    st.error(f"An error occurred: {e}")
