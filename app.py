@@ -5,8 +5,13 @@ import os
 from dotenv import load_dotenv
 
 # 1. Load the secret API key
-load_dotenv()
-api_key = os.getenv("GEMINI_API_KEY")
+try:
+    # The bulletproof way to read the key in Streamlit Cloud
+    api_key = st.secrets["GEMINI_API_KEY"]
+except Exception:
+    # The fallback for your local computer's .env file
+    load_dotenv()
+    api_key = os.getenv("GEMINI_API_KEY")
 
 # 2. Setup the Web Page UI
 st.set_page_config(page_title="AI Finance Intelligence", page_icon="💰")
