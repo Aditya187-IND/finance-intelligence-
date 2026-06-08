@@ -10,7 +10,7 @@ api_key = os.getenv("GEMINI_API_KEY")
 
 # 2. Setup the Web Page UI
 st.set_page_config(page_title="AI Finance Intelligence", page_icon="💰")
-st.title("💰 AI Personal Finance Assistant")
+st.title("AI Personal Finance Assistant")
 st.write("I remember our conversation! Paste your expenses, tell me your salary, or ask follow-up questions.")
 
 # 3. BULLETPROOF FALLBACK
