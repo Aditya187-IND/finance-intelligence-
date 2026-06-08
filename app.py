@@ -11,7 +11,7 @@ api_key = os.getenv("GEMINI_API_KEY")
 # 2. Setup the Web Page UI
 st.set_page_config(page_title="Savr")
 st.title("Savr")
-st.write("I remember our conversation! Paste your expenses, tell me your salary, or ask follow-up questions.")
+st.write(" Paste your expenses, tell me your salary, or ask follow-up questions.")
 
 # 3. BULLETPROOF FALLBACK
 if not api_key:
